@@ -204,16 +204,40 @@ function classList(){
 }
 
 // ---------- 부팅 / 주차 ----------
+// 오늘이 속한 주의 월요일(YYYY-MM-DD). 브라우저 로컬 시각 기준.
+function thisMonday(){
+  const d=new Date();
+  const dow=(d.getDay()+6)%7;          // 월=0 … 일=6
+  d.setHours(0,0,0,0); d.setDate(d.getDate()-dow);
+  const z=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+// 오늘 주와 가장 잘 맞는 주차를 고른다: 정확히 일치 → 없으면 가장 가까운 지난 주 → 그것도 없으면 가장 이른 주
+function pickWeek(weeks, today){
+  if(!weeks.length) return null;
+  const exact=weeks.find(w=>w.start===today);
+  if(exact) return exact.start;
+  const past=weeks.filter(w=>w.start<today).map(w=>w.start).sort();
+  if(past.length) return past[past.length-1];
+  return weeks.map(w=>w.start).sort()[0];
+}
 async function boot(){
   idx=await (await fetch('data/index.json?t='+Date.now())).json();
   code=idx.school.code; schoolName=idx.school.name;
   document.title=schoolName+' 교사 시간표';
+  const today=thisMonday();
+  const sel=pickWeek(idx.weeks, today);          // 날짜로 자동 선택
+  // 다음주 = 오늘 주의 7일 뒤
+  const nx=new Date(today+'T00:00:00'); nx.setDate(nx.getDate()+7);
+  const z=n=>String(n).padStart(2,'0');
+  const nextMon=`${nx.getFullYear()}-${z(nx.getMonth()+1)}-${z(nx.getDate())}`;
   $('#week').innerHTML=idx.weeks.map(w=>{
     let tag;
-    if(w.start===idx.current) tag='이번주';
-    else if(w.start<idx.current) tag='지난 기록';
-    else tag=(w.label&&w.label.includes('기본시간표'))?'예정':'다음주';
-    return `<option value="${w.start}" ${w.start===idx.current?'selected':''}>${w.label||w.start}  [${tag}]</option>`;
+    if(w.start===today) tag='이번주';
+    else if(w.start===nextMon) tag='다음주';
+    else if(w.start<today) tag='지난 기록';
+    else tag='예정';
+    return `<option value="${w.start}" ${w.start===sel?'selected':''}>${w.label||w.start}  [${tag}]</option>`;
   }).join('');
   await loadWeek();
 }
