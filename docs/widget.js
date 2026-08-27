@@ -119,11 +119,24 @@
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && root.classList.contains('show')) { e.stopPropagation(); close(); }
     }, true);
-    var btn = document.createElement('button');
-    btn.textContent = '📅'; btn.title = '시간표'; btn.onclick = open;
-    var host = OPT.mount ? document.querySelector(OPT.mount) : null;
-    if (host) { btn.className = 'ctt-btn'; host.appendChild(btn); }
-    else if (OPT.fab) { btn.id = 'cttFab'; document.body.appendChild(btn); }
+    // data-mount 는 쉼표로 여러 곳 지정 가능 (예: ".shelf-header-right, .editor-top")
+    var mounted = 0;
+    if (OPT.mount) {
+      OPT.mount.split(',').forEach(function (sel) {
+        sel = sel.trim(); if (!sel) return;
+        Array.prototype.forEach.call(document.querySelectorAll(sel), function (host) {
+          var b = document.createElement('button');
+          b.textContent = '📅'; b.title = '시간표';
+          b.className = (host.querySelector('button') || {}).className || 'ctt-btn';
+          b.onclick = open; host.appendChild(b); mounted++;
+        });
+      });
+    }
+    if (!mounted && OPT.fab) {
+      var f = document.createElement('button');
+      f.textContent = '📅'; f.title = '시간표'; f.onclick = open;
+      f.id = 'cttFab'; document.body.appendChild(f);
+    }
   }
   function syncTheme() {
     var d = document.documentElement.getAttribute('data-theme');
